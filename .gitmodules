@@ -57,6 +57,3 @@
 [submodule "components/mqtt/esp-mqtt"]
 	path = components/mqtt/esp-mqtt
 	url = https://github.com/espressif/esp-mqtt.git
-[submodule "components/iotivity/iotivity-constrained"]
-	path = components/iotivity/iotivity-constrained
-	url = https://github.com/iotivity/iotivity-constrained.git
