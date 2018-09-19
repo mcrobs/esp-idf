@@ -199,6 +199,7 @@ extern int ble_txpwr_get(int power_type);
 extern int bredr_txpwr_set(int min_power_level, int max_power_level);
 extern int bredr_txpwr_get(int *min_power_level, int *max_power_level);
 extern void bredr_sco_datapath_set(uint8_t data_path);
+extern void btdm_controller_scan_duplicate_list_clear(void);
 
 extern char _bss_start_btdm;
 extern char _bss_end_btdm;
@@ -820,15 +821,28 @@ static void btdm_controller_mem_init(void)
 {
     /* initialise .data section */
     memcpy(&_data_start_btdm, (void *)_data_start_btdm_rom, &_data_end_btdm - &_data_start_btdm);
-    ESP_LOGD(BTDM_LOG_TAG, ".data initialise [0x%08x] <== [0x%08x]\n", (uint32_t)&_data_start_btdm, _data_start_btdm_rom);
+    ESP_LOGD(BTDM_LOG_TAG, ".data initialise [0x%08x] <== [0x%08x]", (uint32_t)&_data_start_btdm, _data_start_btdm_rom);
 
     //initial em, .bss section
     for (int i = 1; i < sizeof(btdm_dram_available_region)/sizeof(btdm_dram_available_region_t); i++) {
         if (btdm_dram_available_region[i].mode != ESP_BT_MODE_IDLE) {
             memset((void *)btdm_dram_available_region[i].start, 0x0, btdm_dram_available_region[i].end - btdm_dram_available_region[i].start);
-            ESP_LOGD(BTDM_LOG_TAG, ".bss initialise [0x%08x] - [0x%08x]\n", btdm_dram_available_region[i].start, btdm_dram_available_region[i].end);
+            ESP_LOGD(BTDM_LOG_TAG, ".bss initialise [0x%08x] - [0x%08x]", btdm_dram_available_region[i].start, btdm_dram_available_region[i].end);
         }
     }
+}
+
+static esp_err_t try_heap_caps_add_region(intptr_t start, intptr_t end)
+{
+    int ret = heap_caps_add_region(start, end);
+    /* heap_caps_add_region() returns ESP_ERR_INVALID_SIZE if the memory region is
+     * is too small to fit a heap. This cannot be termed as a fatal error and hence
+     * we replace it by ESP_OK
+     */
+    if (ret == ESP_ERR_INVALID_SIZE) {
+        return ESP_OK;
+    }
+    return ret;
 }
 
 esp_err_t esp_bt_controller_mem_release(esp_bt_mode_t mode)
@@ -870,14 +884,14 @@ esp_err_t esp_bt_controller_mem_release(esp_bt_mode_t mode)
                     && mem_end == btdm_dram_available_region[i+1].start) {
                 continue;
             } else {
-                ESP_LOGD(BTDM_LOG_TAG, "Release DRAM [0x%08x] - [0x%08x]\n", mem_start, mem_end);
-                ESP_ERROR_CHECK(heap_caps_add_region(mem_start, mem_end));
+                ESP_LOGD(BTDM_LOG_TAG, "Release DRAM [0x%08x] - [0x%08x]", mem_start, mem_end);
+                ESP_ERROR_CHECK(try_heap_caps_add_region(mem_start, mem_end));
                 update = true;
             }
         } else {
             mem_end = btdm_dram_available_region[i].end;
-            ESP_LOGD(BTDM_LOG_TAG, "Release DRAM [0x%08x] - [0x%08x]\n", mem_start, mem_end);
-            ESP_ERROR_CHECK(heap_caps_add_region(mem_start, mem_end));
+            ESP_LOGD(BTDM_LOG_TAG, "Release DRAM [0x%08x] - [0x%08x]", mem_start, mem_end);
+            ESP_ERROR_CHECK(try_heap_caps_add_region(mem_start, mem_end));
             update = true;
         }
     }
@@ -886,14 +900,14 @@ esp_err_t esp_bt_controller_mem_release(esp_bt_mode_t mode)
         mem_start = (intptr_t)&_btdm_bss_start;
         mem_end = (intptr_t)&_btdm_bss_end;
         if (mem_start != mem_end) {
-            ESP_LOGD(BTDM_LOG_TAG, "Release BTDM BSS [0x%08x] - [0x%08x]\n", mem_start, mem_end);
-            ESP_ERROR_CHECK(heap_caps_add_region(mem_start, mem_end));
+            ESP_LOGD(BTDM_LOG_TAG, "Release BTDM BSS [0x%08x] - [0x%08x]", mem_start, mem_end);
+            ESP_ERROR_CHECK(try_heap_caps_add_region(mem_start, mem_end));
         }
         mem_start = (intptr_t)&_btdm_data_start;
         mem_end = (intptr_t)&_btdm_data_end;
         if (mem_start != mem_end) {
-            ESP_LOGD(BTDM_LOG_TAG, "Release BTDM Data [0x%08x] - [0x%08x]\n", mem_start, mem_end);
-            ESP_ERROR_CHECK(heap_caps_add_region(mem_start, mem_end));
+            ESP_LOGD(BTDM_LOG_TAG, "Release BTDM Data [0x%08x] - [0x%08x]", mem_start, mem_end);
+            ESP_ERROR_CHECK(try_heap_caps_add_region(mem_start, mem_end));
         }
     }
     return ESP_OK;
@@ -913,14 +927,14 @@ esp_err_t esp_bt_mem_release(esp_bt_mode_t mode)
         mem_start = (intptr_t)&_bt_bss_start;
         mem_end = (intptr_t)&_bt_bss_end;
         if (mem_start != mem_end) {
-            ESP_LOGD(BTDM_LOG_TAG, "Release BT BSS [0x%08x] - [0x%08x]\n", mem_start, mem_end);
-            ESP_ERROR_CHECK(heap_caps_add_region(mem_start, mem_end));
+            ESP_LOGD(BTDM_LOG_TAG, "Release BT BSS [0x%08x] - [0x%08x]", mem_start, mem_end);
+            ESP_ERROR_CHECK(try_heap_caps_add_region(mem_start, mem_end));
         }
         mem_start = (intptr_t)&_bt_data_start;
         mem_end = (intptr_t)&_bt_data_end;
         if (mem_start != mem_end) {
-            ESP_LOGD(BTDM_LOG_TAG, "Release BT Data [0x%08x] - [0x%08x]\n", mem_start, mem_end);
-            ESP_ERROR_CHECK(heap_caps_add_region(mem_start, mem_end));
+            ESP_LOGD(BTDM_LOG_TAG, "Release BT Data [0x%08x] - [0x%08x]", mem_start, mem_end);
+            ESP_ERROR_CHECK(try_heap_caps_add_region(mem_start, mem_end));
         }
     }
     return ESP_OK;
@@ -976,7 +990,7 @@ esp_err_t esp_bt_controller_init(esp_bt_controller_config_t *cfg)
     }
 #endif
 
-    ESP_LOGI(BTDM_LOG_TAG, "BT controller compile version [%s]\n", btdm_controller_get_compile_version());
+    ESP_LOGI(BTDM_LOG_TAG, "BT controller compile version [%s]", btdm_controller_get_compile_version());
 
 #if CONFIG_SPIRAM_USE_MALLOC
     btdm_queue_table_mux = xSemaphoreCreateMutex();
@@ -1283,6 +1297,15 @@ esp_err_t esp_bredr_sco_datapath_set(esp_sco_data_path_t data_path)
         return ESP_ERR_INVALID_STATE;
     }
     bredr_sco_datapath_set(data_path);
+    return ESP_OK;
+}
+
+esp_err_t esp_ble_scan_dupilcate_list_flush(void)
+{
+    if (btdm_controller_status != ESP_BT_CONTROLLER_STATUS_ENABLED) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    btdm_controller_scan_duplicate_list_clear();
     return ESP_OK;
 }
 

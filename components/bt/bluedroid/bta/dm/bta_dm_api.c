@@ -438,6 +438,29 @@ void BTA_DmBondCancel(BD_ADDR bd_addr)
 
 /*******************************************************************************
 **
+** Function         BTA_DMSetPinType
+**
+** Description      This function set pin type as BTM_PIN_TYPE_FIXED or BTM_PIN_TYPE_VARIABLE
+**
+**
+** Returns          void
+**
+*******************************************************************************/
+void BTA_DMSetPinType (UINT8 pin_type, UINT8 *pin_code, UINT8 pin_code_len)
+{
+    tBTA_DM_API_SET_PIN_TYPE    *p_msg;
+
+    if ((p_msg = (tBTA_DM_API_SET_PIN_TYPE *) osi_malloc(sizeof(tBTA_DM_API_SET_PIN_TYPE))) != NULL) {
+        p_msg->hdr.event = BTA_DM_API_SET_PIN_TYPE_EVT;
+        p_msg->pin_type = pin_type;
+        p_msg->pin_len = pin_code_len;
+        memcpy(p_msg->p_pin, pin_code, pin_code_len);
+        bta_sys_sendmsg(p_msg);
+    }
+}
+
+/*******************************************************************************
+**
 ** Function         BTA_DmPinReply
 **
 ** Description      This function provides a pincode for a remote device when
@@ -448,7 +471,6 @@ void BTA_DmBondCancel(BD_ADDR bd_addr)
 **
 *******************************************************************************/
 void BTA_DmPinReply(BD_ADDR bd_addr, BOOLEAN accept, UINT8 pin_len, UINT8 *p_pin)
-
 {
     tBTA_DM_API_PIN_REPLY    *p_msg;
 
@@ -826,6 +848,21 @@ void BTA_DmBlePasskeyReply(BD_ADDR bd_addr, BOOLEAN accept, UINT32 passkey)
         bta_sys_sendmsg(p_msg);
     }
 }
+
+void BTA_DmBleSetStaticPasskey(bool add, uint32_t passkey)
+{
+    tBTA_DM_API_SET_DEFAULT_PASSKEY    *p_msg;
+
+    if ((p_msg = (tBTA_DM_API_SET_DEFAULT_PASSKEY *) osi_malloc(sizeof(tBTA_DM_API_SET_DEFAULT_PASSKEY))) != NULL) {
+        memset(p_msg, 0, sizeof(tBTA_DM_API_SET_DEFAULT_PASSKEY));
+
+        p_msg->hdr.event = BTA_DM_API_BLE_SET_STATIC_PASSKEY_EVT;
+        p_msg->add = add;
+        p_msg->static_passkey = passkey;
+        bta_sys_sendmsg(p_msg);
+    }
+}
+
 /*******************************************************************************
 **
 ** Function         BTA_DmBleConfirmReply

@@ -143,10 +143,6 @@ Install the Required Python Packages
 
 Python packages required by ESP-IDF are located in the ``$IDF_PATH/requirements.txt`` file. You can install them by running::
 
-    sudo python -m pip install -r $IDF_PATH/requirements.txt
-
-or you can use the following command for installing them into the user install directory on systems where you don't have administrator rights::
-
     python -m pip install --user -r $IDF_PATH/requirements.txt
 
 .. note::
@@ -155,7 +151,7 @@ or you can use the following command for installing them into the user install d
     interpreter can be checked by running command ``python --version`` and depending on the result, you might want to
     use ``python2``, ``python2.7`` or similar instead of ``python``, e.g.::
 
-        sudo python2.7 -m pip install -r $IDF_PATH/requirements.txt
+        python2.7 -m pip install --user -r $IDF_PATH/requirements.txt
 
 .. _get-started-start-project:
 
@@ -314,6 +310,33 @@ That's all what you need to get started with ESP32!
 
 Now you are ready to try some other :idf:`examples`, or go right to developing your own applications.
 
+
+Environment Variables
+=====================
+
+Some environment variables can be specified whilst calling ``make`` allowing users to **override arguments without needing to reconfigure them using** ``make menuconfig``.
+
++-----------------+--------------------------------------------------------------+
+| Variables       | Description & Usage                                          |
++=================+==============================================================+
+| ``ESPPORT``     | Overrides the serial port used in ``flash`` and ``monitor``. |
+|                 |                                                              |
+|                 | Examples: ``make flash ESPPORT=/dev/tty/USB0``,              |
+|                 | ``make monitor ESPPORT=COM1``                                |
++-----------------+--------------------------------------------------------------+
+| ``ESPBAUD``     | Overrides the serial baud rate when flashing the ESP32.      |
+|                 |                                                              |
+|                 | Example: ``make flash ESPBAUD=9600``                         |
++-----------------+--------------------------------------------------------------+
+| ``MONITORBAUD`` | Overrides the serial baud rate used when monitoring.         |
+|                 |                                                              |
+|                 | Example: ``make monitor MONITORBAUD=9600``                   |
++-----------------+--------------------------------------------------------------+
+
+.. note::
+    Users can export environment variables (e.g. ``export ESPPORT=/dev/tty/USB0``).
+    All subsequent calls of ``make`` within the same terminal session will use 
+    the exported value given that the variable is not simultaneously overridden.
 
 Updating ESP-IDF
 ================

@@ -14,9 +14,11 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
+from __future__ import print_function
+from __future__ import unicode_literals
 import sys, os
 import re
-from subprocess import Popen, PIPE
+import subprocess
 import shlex
 
 # Note: If extensions (or modules to document with autodoc) are in another directory,
@@ -25,10 +27,22 @@ import shlex
 
 from local_util import run_cmd_get_output, copy_if_modified
 
-builddir = '_build'
-builddir = builddir
-if 'BUILDDIR' in os.environ:
+
+try:
     builddir = os.environ['BUILDDIR']
+except KeyError:
+    builddir = '_build'
+
+# Fill in a default IDF_PATH if it's missing (ie when Read The Docs is building the docs)
+try:
+    idf_path = os.environ['IDF_PATH']
+except KeyError:
+    idf_path = os.path.realpath(os.path.join(os.path.dirname(__file__), '..'))
+
+def call_with_python(cmd):
+    # using sys.executable ensures that the scripts are called with the same Python interpreter
+    if os.system('{} {}'.format(sys.executable, cmd)) != 0:
+        raise RuntimeError('{} failed'.format(cmd))
 
 # Call Doxygen to get XML files from the header files
 print("Calling Doxygen to generate latest XML files")
@@ -40,20 +54,30 @@ if os.system("doxygen ../Doxyfile") != 0:
 copy_if_modified('xml/', 'xml_in/')
 
 # Generate 'api_name.inc' files using the XML files by Doxygen
-if os.system('python ../gen-dxd.py') != 0:
-    raise RuntimeError('gen-dxd.py failed')
+call_with_python('../gen-dxd.py')
 
 # Generate 'kconfig.inc' file from components' Kconfig files
+print("Generating kconfig.inc from kconfig contents")
 kconfig_inc_path = '{}/inc/kconfig.inc'.format(builddir)
-if os.system('python ../gen-kconfig-doc.py > ' + kconfig_inc_path + '.in') != 0:
-    raise RuntimeError('gen-kconfig-doc.py failed')
-
+temp_sdkconfig_path = '{}/sdkconfig.tmp'.format(builddir)
+kconfigs = subprocess.check_output(["find", "../../components", "-name", "Kconfig"]).decode()
+kconfig_projbuilds = subprocess.check_output(["find", "../../components", "-name", "Kconfig.projbuild"]).decode()
+confgen_args = [sys.executable,
+                "../../tools/kconfig_new/confgen.py",
+                "--kconfig", "../../Kconfig",
+                "--config", temp_sdkconfig_path,
+                "--create-config-if-missing",
+                "--env", "COMPONENT_KCONFIGS={}".format(kconfigs),
+                "--env", "COMPONENT_KCONFIGS_PROJBUILD={}".format(kconfig_projbuilds),
+                "--env", "IDF_PATH={}".format(idf_path),
+                "--output", "docs", kconfig_inc_path + '.in'
+]
+subprocess.check_call(confgen_args)
 copy_if_modified(kconfig_inc_path + '.in', kconfig_inc_path)
 
 # Generate 'esp_err_defs.inc' file with ESP_ERR_ error code definitions
 esp_err_inc_path = '{}/inc/esp_err_defs.inc'.format(builddir)
-if os.system('python ../../tools/gen_esp_err_to_name.py --rst_output ' + esp_err_inc_path + '.in') != 0:
-    raise RuntimeError('gen_esp_err_to_name.py failed')
+call_with_python('../../tools/gen_esp_err_to_name.py --rst_output ' + esp_err_inc_path + '.in')
 copy_if_modified(esp_err_inc_path + '.in', esp_err_inc_path)
 
 # Generate version-related includes
@@ -62,8 +86,7 @@ copy_if_modified(esp_err_inc_path + '.in', esp_err_inc_path)
 def generate_version_specific_includes(app):
     print("Generating version-specific includes...")
     version_tmpdir = '{}/version_inc'.format(builddir)
-    if os.system('python ../gen-version-specific-includes.py {} {}'.format(app.config.language, version_tmpdir)):
-        raise RuntimeError('gen-version-specific-includes.py failed')
+    call_with_python('../gen-version-specific-includes.py {} {}'.format(app.config.language, version_tmpdir))
     copy_if_modified(version_tmpdir, '{}/inc'.format(builddir))
 
 

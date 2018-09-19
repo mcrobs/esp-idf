@@ -28,6 +28,7 @@
 #include "esp_image_format.h"
 #include "esp_secure_boot.h"
 #include "esp_flash_encrypt.h"
+#include "esp_spi_flash.h"
 #include "sdkconfig.h"
 
 #include "esp_ota_ops.h"
@@ -376,7 +377,7 @@ esp_err_t esp_ota_set_boot_partition(const esp_partition_t *partition)
         return ESP_ERR_OTA_VALIDATE_FAILED;
     }
 
-#ifdef CONFIG_SECURE_BOOT_ENABLED
+#ifdef CONFIG_SECURE_SIGNED_ON_UPDATE
     esp_err_t ret = esp_secure_boot_verify_signature(partition->address, data.image_len);
     if (ret != ESP_OK) {
         return ESP_ERR_OTA_VALIDATE_FAILED;

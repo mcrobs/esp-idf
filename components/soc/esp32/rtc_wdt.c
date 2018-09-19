@@ -73,7 +73,7 @@ esp_err_t rtc_wdt_set_time(rtc_wdt_stage_t stage, unsigned int timeout_ms)
     if (stage > 3) {
         return ESP_ERR_INVALID_ARG;
     }
-    uint32_t timeout = rtc_clk_slow_freq_get_hz() * timeout_ms / 1000;
+    uint32_t timeout = (uint32_t) ((uint64_t) rtc_clk_slow_freq_get_hz() * timeout_ms / 1000);
     if (stage == RTC_WDT_STAGE0) {
         WRITE_PERI_REG(RTC_CNTL_WDTCONFIG1_REG, timeout);
     } else if (stage == RTC_WDT_STAGE1) {
@@ -83,6 +83,27 @@ esp_err_t rtc_wdt_set_time(rtc_wdt_stage_t stage, unsigned int timeout_ms)
     } else {
         WRITE_PERI_REG(RTC_CNTL_WDTCONFIG4_REG, timeout);
     }
+
+    return ESP_OK;
+}
+
+esp_err_t rtc_wdt_get_timeout(rtc_wdt_stage_t stage, unsigned int* timeout_ms)
+{
+    if (stage > 3) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    uint32_t time_tick;
+    if (stage == RTC_WDT_STAGE0) {
+        time_tick = READ_PERI_REG(RTC_CNTL_WDTCONFIG1_REG);
+    } else if (stage == RTC_WDT_STAGE1) {
+        time_tick = READ_PERI_REG(RTC_CNTL_WDTCONFIG2_REG);
+    } else if (stage == RTC_WDT_STAGE2) {
+        time_tick = READ_PERI_REG(RTC_CNTL_WDTCONFIG3_REG);
+    } else {
+        time_tick = READ_PERI_REG(RTC_CNTL_WDTCONFIG4_REG);
+    }
+
+    *timeout_ms = time_tick * 1000 / rtc_clk_slow_freq_get_hz();
 
     return ESP_OK;
 }

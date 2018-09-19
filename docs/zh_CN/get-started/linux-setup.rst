@@ -3,6 +3,8 @@ Linux 平台工具链的标准设置
 *****************************
 :link_to_translation:`en:[English]`
 
+.. important:: 对不起，CMake-based Build System Preview 还没有中文翻译。
+
 安装前提
 =====================
 
@@ -14,7 +16,7 @@ Linux 平台工具链的标准设置
 
 - Ubuntu and Debian::
 
-    sudo apt-get install gcc git wget make libncurses-dev flex bison gperf python python-serial
+    sudo apt-get install gcc git wget make libncurses-dev flex bison gperf python python-pip python-setuptools python-serial
 
 - Arch::
 

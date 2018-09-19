@@ -29,6 +29,7 @@
 #include "btc/btc_dm.h"
 #include "btc/btc_util.h"
 #include "osi/mutex.h"
+#include "esp_bt.h"
 
 static tBTA_BLE_ADV_DATA gl_bta_adv_data;
 static tBTA_BLE_ADV_DATA gl_bta_scan_rsp_data;
@@ -142,6 +143,7 @@ static void btc_to_bta_adv_data(esp_ble_adv_data_t *p_adv_data, tBTA_BLE_ADV_DAT
 
     if (p_adv_data->include_txpower) {
         mask |= BTM_BLE_AD_BIT_TX_PWR;
+        bta_adv_data->tx_power = esp_ble_tx_power_get(ESP_BLE_PWR_TYPE_ADV);
     }
 
     if (p_adv_data->min_interval > 0 && p_adv_data->max_interval > 0 &&
@@ -1112,6 +1114,19 @@ void btc_gap_ble_call_handler(btc_msg_t *msg)
                 uint8_t key_size = 0;
                 STREAM_TO_UINT8(key_size, value);
                 bta_dm_co_ble_set_max_key_size(key_size);
+                break;
+            }
+            case ESP_BLE_SM_SET_STATIC_PASSKEY: {
+                uint32_t passkey = 0;
+                for(uint8_t i = 0; i < arg->set_security_param.len; i++)
+                {
+                    passkey += (((uint8_t *)value)[i]<<(8*i));
+                }
+                BTA_DmBleSetStaticPasskey(true, passkey);
+                break;
+            }
+            case ESP_BLE_SM_CLEAR_STATIC_PASSKEY: {
+                BTA_DmBleSetStaticPasskey(false, 0);
                 break;
             }
             default:
