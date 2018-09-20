@@ -64,7 +64,7 @@ void print_debug(const char* data, const unsigned int len, const char* note, int
     do { \
         printf("[error]:");\
         printf(fmt, ##args); \
-        printf(",heap size:%d%s", system_get_free_heap_size(), "\r\n"); \
+        printf(",heap size:%d%s", esp_get_free_heap_size(), "\r\n"); \
         vTaskDelay(2000 / portTICK_RATE_MS);    \
     } while(1)
 
